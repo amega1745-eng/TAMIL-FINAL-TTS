@@ -516,7 +516,8 @@ function mergeAudioChunks(arrayBuffers) {
     offset += buffer.byteLength;
   }
 
-  return new Blob([combined], { type: "audio/mp3" });
+  // Standard MIME type for MP3 is audio/mpeg for Android DownloadManager recognition
+  return new Blob([combined], { type: "audio/mpeg" });
 }
 
 // --- 10. Main Conversion Workflow ---
@@ -573,6 +574,12 @@ async function startConversion() {
     }
     State.currentAudioUrl = URL.createObjectURL(mergedMp3Blob);
 
+    // Bind direct download anchor link immediately
+    const timestamp = new Date().toISOString().replace(/[:.-]/g, "").slice(0, 15);
+    const filename = `Tamil_${State.selectedVoice.name}_${timestamp}.mp3`;
+    DOM.btnDownloadMp3.href = State.currentAudioUrl;
+    DOM.btnDownloadMp3.download = filename;
+
     // Load into audio player
     DOM.audioPlayer.src = State.currentAudioUrl;
     DOM.audioResultCard.classList.add("active");
@@ -616,8 +623,48 @@ function updateProgress(percent, statusText) {
 }
 
 // --- 11. Download & Share ---
-function downloadCurrentMp3() {
+/**
+ * Universal downloader that works across Android browsers, WebViews, and desktop
+ */
+function triggerDirectDownload(blob, filename) {
+  try {
+    const blobUrl = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.style.display = "none";
+    link.href = blobUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+
+    setTimeout(() => {
+      document.body.removeChild(link);
+      // Keep blobUrl alive for 2 minutes to let Android DownloadManager complete saving
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
+    }, 1000);
+
+    showToast(`Downloading: ${filename}`, "success");
+  } catch (err) {
+    console.warn("Direct blob link failed, falling back to Base64:", err);
+    // Fallback: Base64 data URL
+    const reader = new FileReader();
+    reader.onloadend = function() {
+      const dataUrl = reader.result;
+      const link = document.createElement("a");
+      link.style.display = "none";
+      link.href = dataUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      setTimeout(() => document.body.removeChild(link), 1500);
+      showToast(`Downloading: ${filename}`, "success");
+    };
+    reader.readAsDataURL(blob);
+  }
+}
+
+function downloadCurrentMp3(e) {
   if (!State.currentAudioBlob) {
+    if (e) e.preventDefault();
     showToast("No audio generated yet", "error");
     return;
   }
@@ -625,14 +672,11 @@ function downloadCurrentMp3() {
   const timestamp = new Date().toISOString().replace(/[:.-]/g, "").slice(0, 15);
   const filename = `Tamil_${State.selectedVoice.name}_${timestamp}.mp3`;
 
-  const a = document.createElement("a");
-  a.href = State.currentAudioUrl;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  // Update anchor attributes
+  DOM.btnDownloadMp3.href = State.currentAudioUrl;
+  DOM.btnDownloadMp3.download = filename;
 
-  showToast(`Downloading: ${filename}`, "success");
+  triggerDirectDownload(State.currentAudioBlob, filename);
 }
 
 async function shareCurrentAudio() {
@@ -641,26 +685,28 @@ async function shareCurrentAudio() {
     return;
   }
 
-  const filename = `Tamil_${State.selectedVoice.name}.mp3`;
-  const file = new File([State.currentAudioBlob], filename, { type: "audio/mp3" });
+  const timestamp = new Date().toISOString().replace(/[:.-]/g, "").slice(0, 15);
+  const filename = `Tamil_${State.selectedVoice.name}_${timestamp}.mp3`;
+  const file = new File([State.currentAudioBlob], filename, { type: "audio/mpeg" });
 
   if (navigator.canShare && navigator.canShare({ files: [file] })) {
     try {
       await navigator.share({
         files: [file],
-        title: "Tamil Voice Audio",
-        text: "Audio converted using Edge TTS Tamil Voice App"
+        title: filename,
+        text: "Tamil Voice TTS Audio"
       });
-      showToast("Shared successfully!", "success");
+      showToast("Saved / Shared successfully!", "success");
+      return;
     } catch (err) {
       if (err.name !== "AbortError") {
         console.error("Share error:", err);
       }
     }
-  } else {
-    // Fallback: download
-    downloadCurrentMp3();
   }
+
+  // Fallback to direct download
+  downloadCurrentMp3();
 }
 
 // --- 12. History Management ---
@@ -786,15 +832,8 @@ function playHistoryAudio(item) {
 
 function downloadHistoryAudio(item) {
   if (!item.audioBlob) return;
-  const url = URL.createObjectURL(item.audioBlob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `Tamil_${item.voiceName}_${item.id}.mp3`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(url), 2000);
-  showToast("Downloading audio...", "success");
+  const filename = `Tamil_${item.voiceName}_${item.id}.mp3`;
+  triggerDirectDownload(item.audioBlob, filename);
 }
 
 async function clearAllHistory() {

@@ -622,10 +622,67 @@ function updateProgress(percent, statusText) {
   }
 }
 
-// --- 11. Download & Share ---
+// --- 11. Download & Save Location ---
 /**
- * Universal downloader that works across Android browsers, WebViews, and desktop
+ * Universal downloader: Prompts user to pick their save location on Android & PC
  */
+async function downloadCurrentMp3(e) {
+  if (e) e.preventDefault();
+  if (!State.currentAudioBlob) {
+    showToast("No audio generated yet", "error");
+    return;
+  }
+
+  const timestamp = new Date().toISOString().replace(/[:.-]/g, "").slice(0, 15);
+  const filename = `Tamil_${State.selectedVoice.name}_${timestamp}.mp3`;
+  const file = new File([State.currentAudioBlob], filename, { type: "audio/mpeg" });
+
+  // 1. Android Mobile / APK: Native System Picker (Save to Files / Downloads)
+  // This prompts the user where to save the MP3 on their phone
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: filename,
+        text: "Save Tamil Voice MP3"
+      });
+      showToast("Saved successfully!", "success");
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") {
+        return; // User dismissed picker
+      }
+      console.warn("Share picker unavailable, falling back:", err);
+    }
+  }
+
+  // 2. PC / Desktop: Native 'Save As...' Folder Selection Dialog
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description: "MP3 Audio File",
+          accept: { "audio/mpeg": [".mp3"] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(State.currentAudioBlob);
+      await writable.close();
+      showToast(`Saved to: ${handle.name}`, "success");
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") {
+        return; // User cancelled
+      }
+      console.warn("SaveFilePicker failed, trying direct fallback:", err);
+    }
+  }
+
+  // 3. Direct browser anchor fallback
+  triggerDirectDownload(State.currentAudioBlob, filename);
+}
+
 function triggerDirectDownload(blob, filename) {
   try {
     const blobUrl = URL.createObjectURL(blob);
@@ -638,14 +695,12 @@ function triggerDirectDownload(blob, filename) {
 
     setTimeout(() => {
       document.body.removeChild(link);
-      // Keep blobUrl alive for 2 minutes to let Android DownloadManager complete saving
       setTimeout(() => URL.revokeObjectURL(blobUrl), 120000);
     }, 1000);
 
     showToast(`Downloading: ${filename}`, "success");
   } catch (err) {
     console.warn("Direct blob link failed, falling back to Base64:", err);
-    // Fallback: Base64 data URL
     const reader = new FileReader();
     reader.onloadend = function() {
       const dataUrl = reader.result;
@@ -660,23 +715,6 @@ function triggerDirectDownload(blob, filename) {
     };
     reader.readAsDataURL(blob);
   }
-}
-
-function downloadCurrentMp3(e) {
-  if (!State.currentAudioBlob) {
-    if (e) e.preventDefault();
-    showToast("No audio generated yet", "error");
-    return;
-  }
-
-  const timestamp = new Date().toISOString().replace(/[:.-]/g, "").slice(0, 15);
-  const filename = `Tamil_${State.selectedVoice.name}_${timestamp}.mp3`;
-
-  // Update anchor attributes
-  DOM.btnDownloadMp3.href = State.currentAudioUrl;
-  DOM.btnDownloadMp3.download = filename;
-
-  triggerDirectDownload(State.currentAudioBlob, filename);
 }
 
 async function shareCurrentAudio() {
@@ -830,9 +868,44 @@ function playHistoryAudio(item) {
   showToast(`Playing ${item.voiceName} audio`, "info");
 }
 
-function downloadHistoryAudio(item) {
+async function downloadHistoryAudio(item) {
   if (!item.audioBlob) return;
   const filename = `Tamil_${item.voiceName}_${item.id}.mp3`;
+  const file = new File([item.audioBlob], filename, { type: "audio/mpeg" });
+
+  if (navigator.canShare && navigator.canShare({ files: [file] })) {
+    try {
+      await navigator.share({
+        files: [file],
+        title: filename,
+        text: "Save Tamil Voice MP3"
+      });
+      showToast("Saved successfully!", "success");
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") return;
+    }
+  }
+
+  if (window.showSaveFilePicker) {
+    try {
+      const handle = await window.showSaveFilePicker({
+        suggestedName: filename,
+        types: [{
+          description: "MP3 Audio File",
+          accept: { "audio/mpeg": [".mp3"] }
+        }]
+      });
+      const writable = await handle.createWritable();
+      await writable.write(item.audioBlob);
+      await writable.close();
+      showToast(`Saved to: ${handle.name}`, "success");
+      return;
+    } catch (err) {
+      if (err.name === "AbortError") return;
+    }
+  }
+
   triggerDirectDownload(item.audioBlob, filename);
 }
 

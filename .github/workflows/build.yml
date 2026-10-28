@@ -28,23 +28,29 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Install Dependencies
+        run: npm install
 
-      - name: Install Capacitor & Generate Android Project
+      - name: Build Web Assets
+        run: npm run build
+
+      - name: Initialize Android Platform
         run: |
-          npm install
-          npm run build
-          npx cap add android || true
+          if [ ! -d "android" ]; then
+            npx cap add android
+          fi
           npx cap sync android
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+
+      - name: Grant Execute Permission to Gradle
+        run: chmod +x android/gradlew
 
       - name: Build Debug APK
         run: |
           cd android
-          chmod +x ./gradlew
           ./gradlew assembleDebug --no-daemon
 
-      - name: Rename APK for Easy Download
+      - name: Prepare APK Output
         run: |
           mkdir -p release-output
           cp android/app/build/outputs/apk/debug/app-debug.apk release-output/TamilVoiceTTS.apk
@@ -54,20 +60,3 @@ jobs:
         with:
           name: TamilVoiceTTS-APK
           path: release-output/TamilVoiceTTS.apk
-
-      - name: Create GitHub Release with APK
-        uses: softprops/action-gh-release@v2
-        if: always()
-        continue-on-error: true
-        with:
-          tag_name: v1.0.0
-          name: "Tamil Voice TTS App v1.0.0"
-          body: |
-            🎉 **Tamil Voice - Edge TTS Android Mobile App**
-            
-            ### 📥 Download & Install:
-            Download **TamilVoiceTTS.apk** below directly on your Android phone and tap **Install**!
-            
-            * **Voices**: Pallavi, Saranya, Kani & Venba
-            * **Features**: Unlimited text, Live 0-100% progress, Dark/Light mode, MP3 download, History, PIN App Lock
-          files: release-output/TamilVoiceTTS.apk

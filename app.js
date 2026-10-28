@@ -8,38 +8,38 @@ const TAMIL_VOICES = [
   {
     id: "ta-IN-PallaviNeural",
     name: "Pallavi",
-    region: "இந்தியா (India)",
+    region: "India (Tamil Nadu)",
     gender: "Female",
     flag: "🇮🇳",
     gradioName: "ta-IN-PallaviNeural - ta-IN (Female)",
-    description: "இயல்பான தமிழ் உச்சரிப்பு (Natural Indian Tamil)"
+    description: "Natural Indian Tamil voice"
   },
   {
     id: "ta-LK-SaranyaNeural",
     name: "Saranya",
-    region: "இலங்கை (Sri Lanka)",
+    region: "Sri Lanka",
     gender: "Female",
     flag: "🇱🇰",
     gradioName: "ta-LK-SaranyaNeural - ta-LK (Female)",
-    description: "தெளிவான இலங்கை தமிழ் உச்சரிப்பு (Clear Sri Lankan Tamil)"
+    description: "Clear Sri Lankan Tamil accent"
   },
   {
     id: "ta-MY-KaniNeural",
     name: "Kani",
-    region: "மலேசியா (Malaysia)",
+    region: "Malaysia",
     gender: "Female",
     flag: "🇲🇾",
     gradioName: "ta-MY-KaniNeural - ta-MY (Female)",
-    description: "இனிமையான மலேசிய தமிழ் (Melodic Malaysian Tamil)"
+    description: "Melodic Malaysian Tamil accent"
   },
   {
     id: "ta-SG-VenbaNeural",
     name: "Venba",
-    region: "சிங்கப்பூர் (Singapore)",
+    region: "Singapore",
     gender: "Female",
     flag: "🇸🇬",
     gradioName: "ta-SG-VenbaNeural - ta-SG (Female)",
-    description: "மகிழ்ச்சியான சிங்கப்பூர் தமிழ் (Friendly Singapore Tamil)"
+    description: "Warm and friendly Singapore Tamil tone"
   }
 ];
 

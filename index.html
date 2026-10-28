@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ta" data-theme="dark">
+<html lang="en" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
@@ -31,7 +31,7 @@
           <div class="app-title">
             Tamil Voice <span class="tamil-badge">TTS</span>
           </div>
-          <div class="app-subtitle">தமிழ் பெண்குரல் மாற்றி</div>
+          <div class="app-subtitle">Female Neural Voice Generator</div>
         </div>
       </div>
 
@@ -49,7 +49,7 @@
       <section class="card voice-selector-group">
         <div class="card-title">
           <span class="icon">🎙️</span>
-          <span>குரல் தேர்வு (Select Tamil Female Voice)</span>
+          <span>Select Voice</span>
         </div>
 
         <div class="custom-select-wrapper">
@@ -70,17 +70,17 @@
         <div class="text-box-header">
           <div class="card-title" style="margin-bottom:0;">
             <span class="icon">📝</span>
-            <span>தமிழ் உரை (Tamil Text - Unlimited)</span>
+            <span>Input Text (Unlimited Length)</span>
           </div>
           <div class="text-actions">
             <button id="btnSample" class="chip-btn" title="Load sample Tamil text">
-              <span>💡</span> மாதிரி
+              <span>💡</span> Sample
             </button>
             <button id="btnPaste" class="chip-btn" title="Paste from clipboard">
-              <span>📋</span> ஒட்டு
+              <span>📋</span> Paste
             </button>
             <button id="btnClear" class="chip-btn" title="Clear text">
-              <span>✕</span> அழி
+              <span>✕</span> Clear
             </button>
           </div>
         </div>
@@ -89,15 +89,15 @@
           <textarea 
             id="mainTextarea" 
             class="main-textarea" 
-            placeholder="இங்கு நீங்கள் ஒலிக்க மாற்ற விரும்பும் தமிழ் உரையை தட்டச்சு செய்யவும் அல்லது ஒட்டவும் (வரம்பற்ற அளவு)..."
+            placeholder="Type or paste your text here to convert into Tamil female voice (unlimited length)..."
             rows="6"
             spellcheck="false"
           ></textarea>
         </div>
 
         <div class="textarea-footer">
-          <span>எழுத்துக்கள்: <strong id="charCount">0</strong></span>
-          <span>வார்த்தைகள்: <strong id="wordCount">0</strong></span>
+          <span>Characters: <strong id="charCount">0</strong></span>
+          <span>Words: <strong id="wordCount">0</strong></span>
         </div>
       </section>
 
@@ -106,7 +106,7 @@
         <div class="slider-header">
           <div class="card-title" style="margin-bottom:0;">
             <span class="icon">⚡</span>
-            <span>பேசும் வேகம் (Speed Slider)</span>
+            <span>Speech Speed</span>
           </div>
           <div id="speedBadge" class="slider-value-badge">1.0x Normal</div>
         </div>
@@ -125,9 +125,9 @@
         </div>
 
         <div class="slider-labels">
-          <span>0.5x மெதுவாக</span>
-          <span>1.0x இயல்பு</span>
-          <span>1.5x வேகமாக</span>
+          <span>0.5x Slow</span>
+          <span>1.0x Normal</span>
+          <span>1.5x Fast</span>
         </div>
       </section>
 
@@ -144,7 +144,7 @@
         <div class="progress-header">
           <div class="progress-title">
             <span>⏳</span>
-            <span>குரலாக மாற்றப்படுகிறது...</span>
+            <span>Converting to Audio...</span>
           </div>
           <div id="progressPercent" class="progress-percent">0%</div>
         </div>
@@ -155,7 +155,7 @@
 
         <div class="progress-status-text">
           <span id="progressStatus">Initializing Edge TTS engine...</span>
-          <button id="btnCancelConvert" class="btn-cancel-convert">ரத்து செய் (Cancel)</button>
+          <button id="btnCancelConvert" class="btn-cancel-convert">Cancel</button>
         </div>
       </div>
 
@@ -164,7 +164,7 @@
         <div class="result-card-header">
           <div class="result-status">
             <span>🎉</span>
-            <span>குரல் தயார்! (Audio Ready)</span>
+            <span>Audio Ready!</span>
           </div>
         </div>
 
@@ -206,7 +206,7 @@
       <!-- Drawer Tabs -->
       <div class="drawer-nav-tabs">
         <button id="tabHistoryBtn" class="drawer-tab active">
-          <span>📜</span> வரலாறு (History)
+          <span>📜</span> History
         </button>
         <button id="tabLockBtn" class="drawer-tab">
           <span>🔒</span> App Lock (PIN)
@@ -216,7 +216,7 @@
       <!-- Tab Content 1: Previous Converted Text & Audio History -->
       <div id="tabHistoryContent" class="drawer-tab-content active">
         <div class="history-header">
-          <h3>சேமிக்கப்பட்டவை (<span id="historyCountBadge">0</span>)</h3>
+          <h3>Saved Audios (<span id="historyCountBadge">0</span>)</h3>
           <button id="btnClearHistory" class="btn-clear-history">Clear All</button>
         </div>
 
@@ -256,9 +256,9 @@
         <div class="card" style="margin-top:10px; font-size:0.8rem; line-height:1.5; color:var(--text-secondary);">
           <div style="font-weight:700; color:var(--text-primary); margin-bottom:6px;">ℹ️ About Edge TTS</div>
           <p>This personal app connects to Microsoft Edge's Neural Text-to-Speech service via the Hugging Face Space reference API.</p>
-          <p style="margin-top:6px;">Supported Tamil Voices:</p>
+          <p style="margin-top:6px;">Supported Tamil Female Voices:</p>
           <ul style="padding-left:18px; margin-top:4px;">
-            <li><strong>Pallavi</strong> - Tamil Nadu, India</li>
+            <li><strong>Pallavi</strong> - India (Tamil Nadu)</li>
             <li><strong>Saranya</strong> - Sri Lanka</li>
             <li><strong>Kani</strong> - Malaysia</li>
             <li><strong>Venba</strong> - Singapore</li>

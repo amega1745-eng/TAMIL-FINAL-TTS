@@ -1,0 +1,73 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Set up Java JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: 'temurin'
+          java-version: '17'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Capacitor & Generate Android Project
+        run: |
+          npm install
+          npm run build
+          npx cap add android || true
+          npx cap sync android
+
+      - name: Build Debug APK
+        run: |
+          cd android
+          chmod +x ./gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: Rename APK for Easy Download
+        run: |
+          mkdir -p release-output
+          cp android/app/build/outputs/apk/debug/app-debug.apk release-output/TamilVoiceTTS.apk
+
+      - name: Upload APK as Workflow Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: TamilVoiceTTS-APK
+          path: release-output/TamilVoiceTTS.apk
+
+      - name: Create GitHub Release with APK
+        uses: softprops/action-gh-release@v2
+        if: always()
+        continue-on-error: true
+        with:
+          tag_name: v1.0.0
+          name: "Tamil Voice TTS App v1.0.0"
+          body: |
+            🎉 **Tamil Voice - Edge TTS Android Mobile App**
+            
+            ### 📥 Download & Install:
+            Download **TamilVoiceTTS.apk** below directly on your Android phone and tap **Install**!
+            
+            * **Voices**: Pallavi, Saranya, Kani & Venba
+            * **Features**: Unlimited text, Live 0-100% progress, Dark/Light mode, MP3 download, History, PIN App Lock
+          files: release-output/TamilVoiceTTS.apk

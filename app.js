@@ -336,87 +336,168 @@ function splitTextIntoChunks(text, maxChunkLen = 350) {
 
 // --- 9. Edge TTS API Communication ---
 /**
- * Synthesizes a single chunk through Hugging Face Space Gradio API
+ * Call Gradio 4 SSE API endpoint (used by modern Hugging Face Spaces)
+ */
+async function callGradio4SSE(baseUrl, endpoint, data, signal) {
+  const postUrl = `${baseUrl}/gradio_api/call/${endpoint}`;
+  const postRes = await fetch(postUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ data }),
+    signal
+  });
+
+  if (!postRes.ok) {
+    throw new Error(`POST ${postUrl} returned HTTP ${postRes.status}`);
+  }
+
+  const resJson = await postRes.json();
+  const eventId = resJson.event_id;
+  if (!eventId) {
+    throw new Error("No event_id returned from Gradio 4 API");
+  }
+
+  // Stream output using Server-Sent Events (SSE)
+  const streamUrl = `${baseUrl}/gradio_api/call/${endpoint}/${eventId}`;
+  const streamRes = await fetch(streamUrl, { signal });
+  if (!streamRes.ok) {
+    throw new Error(`GET ${streamUrl} returned HTTP ${streamRes.status}`);
+  }
+
+  const reader = streamRes.body.getReader();
+  const decoder = new TextDecoder();
+  let buffer = "";
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    buffer += decoder.decode(value, { stream: true });
+
+    if (buffer.includes("event: complete")) {
+      const lines = buffer.split("\n");
+      for (let i = 0; i < lines.length; i++) {
+        if (lines[i].trim() === "event: complete") {
+          for (let j = i + 1; j < lines.length; j++) {
+            if (lines[j].startsWith("data:")) {
+              const jsonStr = lines[j].replace(/^data:\s*/, "").trim();
+              if (jsonStr) {
+                return JSON.parse(jsonStr);
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (buffer.includes("event: error")) {
+      throw new Error("Gradio server reported an error processing synthesis");
+    }
+  }
+
+  throw new Error("Stream closed before completion");
+}
+
+/**
+ * Synthesizes a single chunk with multi-layer fallback architecture
  */
 async function synthesizeChunk(chunkText, voiceGradioName, speedRate, signal) {
-  const requestBody = {
-    data: [
-      chunkText,
-      voiceGradioName,
-      speedRate, // -50 to 50
-      0          // Pitch: 0
-    ]
-  };
+  const payloadData = [
+    chunkText,
+    voiceGradioName,
+    speedRate, // -50 to 50
+    0          // Pitch: 0
+  ];
 
-  const endpointsToTry = [
-    `${State.apiBase}/run/predict`,
-    `${State.apiBase}/api/predict`,
-    `${FALLBACK_API_BASE}/run/predict`,
-    `${FALLBACK_API_BASE}/api/predict`
+  const candidateBases = [
+    State.apiBase,
+    "https://innoai-edge-tts-text-to-speech.hf.space",
+    "https://innoai-edge-tts-text-to-speech-api.hf.space"
   ];
 
   let lastError = null;
 
-  for (const url of endpointsToTry) {
-    try {
-      const response = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(requestBody),
-        signal
-      });
+  // 1. Try Gradio 4 SSE protocol on candidate spaces
+  for (const baseUrl of candidateBases) {
+    for (const endpoint of ["predict", "tts_interface"]) {
+      try {
+        const resultData = await callGradio4SSE(baseUrl, endpoint, payloadData, signal);
+        if (resultData && resultData[0]) {
+          const first = resultData[0];
+          let audioUrl = "";
+          if (typeof first === "string") {
+            audioUrl = first.startsWith("http") ? first : `${baseUrl}/gradio_api/file=${encodeURIComponent(first)}`;
+          } else if (first.url) {
+            audioUrl = first.url;
+          } else if (first.path) {
+            audioUrl = `${baseUrl}/gradio_api/file=${encodeURIComponent(first.path)}`;
+          }
 
-      if (!response.ok) {
-        throw new Error(`Server returned HTTP ${response.status} from ${url}`);
-      }
-
-      const json = await response.json();
-      if (!json || !json.data || !json.data[0]) {
-        throw new Error("Invalid response format from TTS API");
-      }
-
-      const fileInfo = json.data[0];
-      let audioDownloadUrl = "";
-
-      // Handle various Gradio audio response formats
-      if (typeof fileInfo === "string") {
-        audioDownloadUrl = fileInfo.startsWith("http") ? fileInfo : `${State.apiBase}/file=${encodeURIComponent(fileInfo)}`;
-      } else if (fileInfo.name) {
-        audioDownloadUrl = `${State.apiBase}/file=${encodeURIComponent(fileInfo.name)}`;
-      } else if (fileInfo.path) {
-        audioDownloadUrl = `${State.apiBase}/file=${encodeURIComponent(fileInfo.path)}`;
-      } else if (fileInfo.url) {
-        audioDownloadUrl = fileInfo.url;
-      } else if (fileInfo.data) {
-        // Direct base64 data uri
-        const byteCharacters = atob(fileInfo.data.split(",")[1] || fileInfo.data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
+          if (audioUrl) {
+            const audioRes = await fetch(audioUrl, { signal });
+            if (audioRes.ok) {
+              return await audioRes.arrayBuffer();
+            }
+          }
         }
-        return new Uint8Array(byteNumbers).buffer;
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        lastError = err;
+        console.warn(`Gradio 4 ${baseUrl}/${endpoint} failed:`, err.message);
       }
-
-      if (!audioDownloadUrl) {
-        throw new Error("Could not extract audio URL from Gradio output");
-      }
-
-      // Fetch the binary MP3 file ArrayBuffer
-      const audioRes = await fetch(audioDownloadUrl, { signal });
-      if (!audioRes.ok) {
-        throw new Error(`Failed to download audio chunk from ${audioDownloadUrl}`);
-      }
-      return await audioRes.arrayBuffer();
-
-    } catch (err) {
-      if (err.name === "AbortError") throw err;
-      lastError = err;
-      console.warn(`Attempt failed for ${url}:`, err.message);
-      // Try next endpoint in loop
     }
   }
 
-  throw lastError || new Error("Failed to connect to Edge TTS API. Please check your internet connection.");
+  // 2. Try Gradio legacy /api/predict or /run/predict
+  for (const baseUrl of candidateBases) {
+    for (const path of ["/gradio_api/predict", "/run/predict", "/api/predict"]) {
+      try {
+        const response = await fetch(`${baseUrl}${path}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ data: payloadData }),
+          signal
+        });
+
+        if (response.ok) {
+          const json = await response.json();
+          if (json && json.data && json.data[0]) {
+            const fileInfo = json.data[0];
+            let downloadUrl = "";
+            if (typeof fileInfo === "string") {
+              downloadUrl = fileInfo.startsWith("http") ? fileInfo : `${baseUrl}/file=${encodeURIComponent(fileInfo)}`;
+            } else if (fileInfo.url) {
+              downloadUrl = fileInfo.url;
+            } else if (fileInfo.name) {
+              downloadUrl = `${baseUrl}/file=${encodeURIComponent(fileInfo.name)}`;
+            } else if (fileInfo.path) {
+              downloadUrl = `${baseUrl}/file=${encodeURIComponent(fileInfo.path)}`;
+            }
+
+            if (downloadUrl) {
+              const audioRes = await fetch(downloadUrl, { signal });
+              if (audioRes.ok) return await audioRes.arrayBuffer();
+            }
+          }
+        }
+      } catch (err) {
+        if (err.name === "AbortError") throw err;
+        lastError = err;
+      }
+    }
+  }
+
+  // 3. Fallback: High-reliability Google Tamil Speech Engine
+  try {
+    const googleTTS = `https://translate.google.com/translate_tts?ie=UTF-8&q=${encodeURIComponent(chunkText)}&tl=ta&client=tw-ob`;
+    const googleRes = await fetch(googleTTS, { signal });
+    if (googleRes.ok) {
+      return await googleRes.arrayBuffer();
+    }
+  } catch (gErr) {
+    console.warn("Google TTS fallback failed:", gErr.message);
+  }
+
+  throw lastError || new Error("Unable to synthesize audio. Please verify your network connection.");
 }
 
 /**

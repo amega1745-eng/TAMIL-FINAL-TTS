@@ -1,0 +1,20 @@
+{
+  "name": "tamil-voice-tts-android",
+  "version": "1.0.0",
+  "description": "Tamil Text to Speech Android App using Edge TTS (Pallavi, Saranya, Kani, Venba)",
+  "main": "index.html",
+  "scripts": {
+    "build": "node -e \"const fs=require('fs'); fs.mkdirSync('www',{recursive:true}); ['index.html','styles.css','app.js','manifest.json','icon.svg','sw.js'].forEach(f=>fs.copyFileSync(f,'www/'+f)); console.log('Assets prepared in www/');\"",
+    "start": "python server.py"
+  },
+  "keywords": ["tamil", "tts", "android", "edge-tts", "text-to-speech"],
+  "author": "Antigravity",
+  "license": "MIT",
+  "dependencies": {
+    "@capacitor/core": "^6.0.0",
+    "@capacitor/android": "^6.0.0"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^6.0.0"
+  }
+}

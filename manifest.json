@@ -1,0 +1,19 @@
+{
+  "name": "Tamil Voice - Edge TTS",
+  "short_name": "Tamil TTS",
+  "description": "Convert unlimited Tamil text to natural female voice (Pallavi, Saranya, Kani, Venba) and download as MP3",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0f19",
+  "theme_color": "#131b2e",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "192x192 512x512",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["utilities", "productivity", "multimedia"]
+}

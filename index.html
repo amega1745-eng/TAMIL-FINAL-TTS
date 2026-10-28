@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html lang="ta" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#131b2e">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="description" content="Tamil Text to Speech Mobile App - Edge TTS with Pallavi, Saranya, Kani & Venba">
+  
+  <title>Tamil Voice - Edge TTS</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" type="image/svg+xml" href="icon.svg">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Main Mobile App Container -->
+  <div class="app-container">
+
+    <!-- Top App Bar / Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <button id="btnHamburger" class="icon-btn" aria-label="Open Navigation Drawer" title="Menu">
+          <span>☰</span>
+        </button>
+        <div class="app-title-group">
+          <div class="app-title">
+            Tamil Voice <span class="tamil-badge">TTS</span>
+          </div>
+          <div class="app-subtitle">தமிழ் பெண்குரல் மாற்றி</div>
+        </div>
+      </div>
+
+      <!-- Home Page Light/Dark Theme Switch -->
+      <button id="themeToggleBtn" class="theme-toggle-btn" aria-label="Toggle Light and Dark Theme" title="Toggle Theme">
+        <span id="themeIcon" class="icon">🌙</span>
+        <span id="themeLabel">Dark</span>
+      </button>
+    </header>
+
+    <!-- Main Scrollable Screen -->
+    <main class="main-content">
+
+      <!-- Voice Selection Card -->
+      <section class="card voice-selector-group">
+        <div class="card-title">
+          <span class="icon">🎙️</span>
+          <span>குரல் தேர்வு (Select Tamil Female Voice)</span>
+        </div>
+
+        <div class="custom-select-wrapper">
+          <select id="voiceSelect" class="custom-select" aria-label="Select Tamil Female Voice">
+            <!-- Populated via JavaScript: Pallavi, Saranya, Kani, Venba -->
+          </select>
+          <span class="select-arrow">▼</span>
+        </div>
+
+        <div class="voice-info-pill">
+          <span id="voiceFlag">🇮🇳</span>
+          <span id="voiceDesc">Loading voice details...</span>
+        </div>
+      </section>
+
+      <!-- Text Input Area Card -->
+      <section class="card text-box-group">
+        <div class="text-box-header">
+          <div class="card-title" style="margin-bottom:0;">
+            <span class="icon">📝</span>
+            <span>தமிழ் உரை (Tamil Text - Unlimited)</span>
+          </div>
+          <div class="text-actions">
+            <button id="btnSample" class="chip-btn" title="Load sample Tamil text">
+              <span>💡</span> மாதிரி
+            </button>
+            <button id="btnPaste" class="chip-btn" title="Paste from clipboard">
+              <span>📋</span> ஒட்டு
+            </button>
+            <button id="btnClear" class="chip-btn" title="Clear text">
+              <span>✕</span> அழி
+            </button>
+          </div>
+        </div>
+
+        <div class="textarea-container">
+          <textarea 
+            id="mainTextarea" 
+            class="main-textarea" 
+            placeholder="இங்கு நீங்கள் ஒலிக்க மாற்ற விரும்பும் தமிழ் உரையை தட்டச்சு செய்யவும் அல்லது ஒட்டவும் (வரம்பற்ற அளவு)..."
+            rows="6"
+            spellcheck="false"
+          ></textarea>
+        </div>
+
+        <div class="textarea-footer">
+          <span>எழுத்துக்கள்: <strong id="charCount">0</strong></span>
+          <span>வார்த்தைகள்: <strong id="wordCount">0</strong></span>
+        </div>
+      </section>
+
+      <!-- Speed Slider Control Card -->
+      <section class="card speed-control-group">
+        <div class="slider-header">
+          <div class="card-title" style="margin-bottom:0;">
+            <span class="icon">⚡</span>
+            <span>பேசும் வேகம் (Speed Slider)</span>
+          </div>
+          <div id="speedBadge" class="slider-value-badge">1.0x Normal</div>
+        </div>
+
+        <div class="slider-wrapper">
+          <input 
+            type="range" 
+            id="speedSlider" 
+            class="custom-range" 
+            min="-50" 
+            max="50" 
+            value="0" 
+            step="5"
+            aria-label="Speech Speed Rate"
+          >
+        </div>
+
+        <div class="slider-labels">
+          <span>0.5x மெதுவாக</span>
+          <span>1.0x இயல்பு</span>
+          <span>1.5x வேகமாக</span>
+        </div>
+      </section>
+
+      <!-- Convert Action -->
+      <div class="action-buttons-group">
+        <button id="btnConvert" class="btn-convert">
+          <span class="btn-icon">🔊</span>
+          <span id="btnConvertText">Convert to Audio</span>
+        </button>
+      </div>
+
+      <!-- Live Conversion Progress Card (0% - 100%) -->
+      <div id="progressCard" class="progress-card">
+        <div class="progress-header">
+          <div class="progress-title">
+            <span>⏳</span>
+            <span>குரலாக மாற்றப்படுகிறது...</span>
+          </div>
+          <div id="progressPercent" class="progress-percent">0%</div>
+        </div>
+
+        <div class="progress-bar-track">
+          <div id="progressBarFill" class="progress-bar-fill"></div>
+        </div>
+
+        <div class="progress-status-text">
+          <span id="progressStatus">Initializing Edge TTS engine...</span>
+          <button id="btnCancelConvert" class="btn-cancel-convert">ரத்து செய் (Cancel)</button>
+        </div>
+      </div>
+
+      <!-- Converted Audio Result & Download Section -->
+      <div id="audioResultCard" class="audio-result-card">
+        <div class="result-card-header">
+          <div class="result-status">
+            <span>🎉</span>
+            <span>குரல் தயார்! (Audio Ready)</span>
+          </div>
+        </div>
+
+        <!-- HTML5 Audio Player -->
+        <audio id="audioPlayer" class="native-audio-player" controls preload="metadata"></audio>
+
+        <!-- Download as MP3 Button -->
+        <button id="btnDownloadMp3" class="btn-download-mp3">
+          <span>📥</span>
+          <span>Download as MP3</span>
+        </button>
+
+        <div class="secondary-actions-row">
+          <button id="btnShareAudio" class="btn-share">
+            <span>📤</span>
+            <span>Share Audio</span>
+          </button>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- Hamburger Navigation Drawer -->
+    <div id="drawerBackdrop" class="drawer-backdrop"></div>
+    <aside id="hamburgerDrawer" class="hamburger-drawer" aria-label="Navigation Drawer">
+      <div class="drawer-header">
+        <div class="drawer-user-info">
+          <div class="drawer-avatar">🎙️</div>
+          <div class="drawer-app-meta">
+            <h2>Tamil Voice TTS</h2>
+            <p>Edge TTS Neural Engine</p>
+          </div>
+        </div>
+        <button id="btnCloseDrawer" class="icon-btn" style="color:white;" aria-label="Close Drawer">
+          ✕
+        </button>
+      </div>
+
+      <!-- Drawer Tabs -->
+      <div class="drawer-nav-tabs">
+        <button id="tabHistoryBtn" class="drawer-tab active">
+          <span>📜</span> வரலாறு (History)
+        </button>
+        <button id="tabLockBtn" class="drawer-tab">
+          <span>🔒</span> App Lock (PIN)
+        </button>
+      </div>
+
+      <!-- Tab Content 1: Previous Converted Text & Audio History -->
+      <div id="tabHistoryContent" class="drawer-tab-content active">
+        <div class="history-header">
+          <h3>சேமிக்கப்பட்டவை (<span id="historyCountBadge">0</span>)</h3>
+          <button id="btnClearHistory" class="btn-clear-history">Clear All</button>
+        </div>
+
+        <div id="historyList" class="history-list">
+          <!-- Populated dynamically from IndexedDB -->
+        </div>
+      </div>
+
+      <!-- Tab Content 2: App Lock with PIN Only -->
+      <div id="tabLockContent" class="drawer-tab-content">
+        <div class="lock-settings-card">
+          <div class="lock-toggle-row">
+            <div>
+              <div style="font-weight:700; font-size:0.95rem;">App PIN Protection</div>
+              <div style="font-size:0.75rem; color:var(--text-muted);">Require PIN to open app</div>
+            </div>
+            <label class="toggle-switch">
+              <input type="checkbox" id="pinToggleInput">
+              <span class="slider-round"></span>
+            </label>
+          </div>
+
+          <div id="pinStatusBox" class="pin-status-box">
+            <span>🔓</span> PIN Protection is OFF
+          </div>
+
+          <button id="btnChangePin" class="btn-lock-action" style="display:none;">
+            Change PIN Code
+          </button>
+
+          <button id="btnLockNow" class="btn-lock-now" style="display:none;">
+            🔒 Lock App Now
+          </button>
+        </div>
+
+        <!-- Info Card -->
+        <div class="card" style="margin-top:10px; font-size:0.8rem; line-height:1.5; color:var(--text-secondary);">
+          <div style="font-weight:700; color:var(--text-primary); margin-bottom:6px;">ℹ️ About Edge TTS</div>
+          <p>This personal app connects to Microsoft Edge's Neural Text-to-Speech service via the Hugging Face Space reference API.</p>
+          <p style="margin-top:6px;">Supported Tamil Voices:</p>
+          <ul style="padding-left:18px; margin-top:4px;">
+            <li><strong>Pallavi</strong> - Tamil Nadu, India</li>
+            <li><strong>Saranya</strong> - Sri Lanka</li>
+            <li><strong>Kani</strong> - Malaysia</li>
+            <li><strong>Venba</strong> - Singapore</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Fullscreen PIN Lock Security Overlay -->
+    <div id="pinLockOverlay" class="pin-lock-overlay" role="dialog" aria-modal="true">
+      <div class="pin-lock-box">
+        <div class="pin-lock-icon">🔒</div>
+        <h2 id="pinLockTitle" class="pin-lock-title">Enter App PIN</h2>
+        <p id="pinLockSubtitle" class="pin-lock-subtitle">Enter your 4-digit PIN to access the app</p>
+
+        <!-- PIN Dots Display -->
+        <div id="pinDotsRow" class="pin-dots-row">
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+          <div class="pin-dot"></div>
+        </div>
+
+        <!-- Numeric Keypad -->
+        <div id="keypadGrid" class="keypad-grid">
+          <button class="keypad-btn" data-val="1">1</button>
+          <button class="keypad-btn" data-val="2">2</button>
+          <button class="keypad-btn" data-val="3">3</button>
+          <button class="keypad-btn" data-val="4">4</button>
+          <button class="keypad-btn" data-val="5">5</button>
+          <button class="keypad-btn" data-val="6">6</button>
+          <button class="keypad-btn" data-val="7">7</button>
+          <button class="keypad-btn" data-val="8">8</button>
+          <button class="keypad-btn" data-val="9">9</button>
+          <button class="keypad-btn action-key" data-action="clear">Clear</button>
+          <button class="keypad-btn" data-val="0">0</button>
+          <button class="keypad-btn action-key" data-action="backspace">⌫</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast Notifications Layer -->
+    <div id="toastContainer" class="toast-container" aria-live="polite"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+  <script>
+    // Register Service Worker for PWA
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('sw.js').catch(err => {
+          console.log('SW registration note:', err);
+        });
+      });
+    }
+  </script>
+</body>
+</html>
